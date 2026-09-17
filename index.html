@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Diagnóstico de Não Fechamentos — TripleTen Brasil</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface2: #f0f2f5;
+  --border: #e2e6ed;
+  --text: #1a2030;
+  --text2: #4a5568;
+  --text3: #8a9ab0;
+  --navy: #1a2e52;
+  --blue: #2563eb;
+  --blue-soft: #dbeafe;
+  --green: #16a34a;
+  --green-soft: #dcfce7;
+  --amber: #d97706;
+  --amber-soft: #fef3c7;
+  --red: #dc2626;
+  --red-soft: #fee2e2;
+  --purple: #7c3aed;
+  --purple-soft: #ede9fe;
+  --teal: #0d9488;
+  --teal-soft: #ccfbf1;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+    --text: #e6edf3; --text2: #8b949e; --text3: #484f58; --navy: #79adf5;
+    --blue: #58a6ff; --blue-soft: #1f2d4a; --green-soft: #1a3a27;
+    --amber-soft: #3a2a0a; --red-soft: #3a1212; --purple-soft: #2a1a4a; --teal-soft: #0a2e2a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+  --text: #e6edf3; --text2: #8b949e; --text3: #484f58; --navy: #79adf5;
+  --blue: #58a6ff; --blue-soft: #1f2d4a; --green-soft: #1a3a27;
+  --amber-soft: #3a2a0a; --red-soft: #3a1212; --purple-soft: #2a1a4a; --teal-soft: #0a2e2a;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  padding-inline: 20px;
+  padding-block: 24px 48px;
+}
+.page { max-width: 1100px; margin: 0 auto; }
+
+/* TOPBAR */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px; margin-bottom: 32px;
+  padding-bottom: 16px; border-bottom: 1px solid var(--border);
+}
+.topbar-brand { font-weight: 700; font-size: 13px; color: var(--navy); letter-spacing: .01em; }
+.topbar-controls { display: flex; gap: 8px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text2);
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s; user-select: none;
+  font-family: inherit;
+}
+.btn:hover { background: var(--surface2); color: var(--text); }
+.btn-lang.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.btn-lang { min-width: 38px; justify-content: center; }
+
+/* HEADER */
+.report-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+.report-title { font-family: 'IBM Plex Serif', Georgia, serif; font-size: clamp(22px, 4vw, 34px); font-weight: 600; color: var(--navy); line-height: 1.2; margin-bottom: 8px; text-wrap: balance; }
+.report-sub { color: var(--text2); font-size: 15px; max-width: 700px; }
+.report-meta { margin-top: 14px; display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
+.meta-item { font-size: 12px; color: var(--text3); }
+.meta-item strong { color: var(--text2); }
+
+/* ALERT */
+.alert {
+  background: var(--amber-soft); border: 1px solid var(--amber); border-radius: 8px;
+  padding: 12px 16px; font-size: 13px; color: var(--text); margin-bottom: 32px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.alert-icon { font-size: 16px; flex-shrink: 0; }
+
+/* SECTION */
+.section { margin-bottom: 44px; }
+.section-title {
+  font-family: 'IBM Plex Serif', serif; font-size: 20px; font-weight: 600;
+  color: var(--navy); margin-bottom: 4px; padding-top: 4px;
+}
+.section-desc { color: var(--text2); font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+/* KPI */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 14px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.kpi-label { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+.kpi-value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--navy); line-height: 1; }
+.kpi-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+/* IMPACT GRID */
+.impact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.impact-card { border-radius: 12px; padding: 18px 20px; border: 1px solid transparent; }
+.cat-b { background: var(--red-soft); border-color: var(--red); }
+.cat-e { background: var(--amber-soft); border-color: var(--amber); }
+.cat-a { background: var(--blue-soft); border-color: var(--blue); }
+.cat-d { background: var(--purple-soft); border-color: var(--purple); }
+.cat-c { background: var(--teal-soft); border-color: var(--teal); }
+.cat-f { background: var(--surface2); border-color: var(--border); }
+.impact-cat { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; }
+.cat-b .impact-cat { color: var(--red); }
+.cat-e .impact-cat { color: var(--amber); }
+.cat-a .impact-cat { color: var(--blue); }
+.cat-d .impact-cat { color: var(--purple); }
+.cat-c .impact-cat { color: var(--teal); }
+.cat-f .impact-cat { color: var(--text3); }
+.impact-label { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.impact-pct { font-size: 36px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 6px; }
+.cat-b .impact-pct { color: var(--red); }
+.cat-e .impact-pct { color: var(--amber); }
+.cat-a .impact-pct { color: var(--blue); }
+.cat-d .impact-pct { color: var(--purple); }
+.cat-c .impact-pct { color: var(--teal); }
+.cat-f .impact-pct { color: var(--text2); }
+.impact-desc { font-size: 12px; color: var(--text2); line-height: 1.55; }
+
+/* TABLES */
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 8px 12px; font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text3); border-bottom: 2px solid var(--border); white-space: nowrap; }
+td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+.center { text-align: center; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--text3); font-size: 12px; }
+
+/* REASON BAR */
+.bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.bar-bg { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+
+/* CHIPS */
+.chip { display: inline-block; padding: 2px 8px; border-radius: 100px; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 12px; }
+.chip-good { background: var(--green-soft); color: var(--green); }
+.chip-ok   { background: var(--blue-soft);  color: var(--blue); }
+.chip-warn { background: var(--amber-soft); color: var(--amber); }
+.chip-crit { background: var(--red-soft);   color: var(--red); }
+.cat-badge { display: inline-block; padding: 2px 7px; border-radius: 100px; font-size: 10px; font-weight: 700; letter-spacing: .05em; }
+.badge-b  { background: var(--red-soft);    color: var(--red); }
+.badge-e  { background: var(--amber-soft);  color: var(--amber); }
+.badge-a  { background: var(--blue-soft);   color: var(--blue); }
+.badge-d  { background: var(--purple-soft); color: var(--purple); }
+.badge-c  { background: var(--teal-soft);   color: var(--teal); }
+.badge-op { background: var(--surface2);    color: var(--text3); }
+.mtg-badge { display: inline-block; background: var(--surface2); color: var(--text3); border-radius: 4px; padding: 1px 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.small-note { font-style: italic; color: var(--text3); font-size: 11px; }
+tr.team-avg td { background: var(--surface2); font-weight: 700; }
+td.highlight-col { background: rgba(220,38,38,.05); }
+
+/* SPIN CARDS */
+.spin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.spin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.spin-letter { font-size: 38px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.spin-s .spin-letter { color: var(--green); }
+.spin-p .spin-letter { color: var(--blue); }
+.spin-i .spin-letter { color: var(--red); }
+.spin-n .spin-letter { color: var(--amber); }
+.spin-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.spin-score { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.spin-s .spin-score { color: var(--green); }
+.spin-p .spin-score { color: var(--blue); }
+.spin-i .spin-score { color: var(--red); }
+.spin-n .spin-score { color: var(--amber); }
+.spin-verdict { font-size: 12px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
+
+/* MARKET */
+.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
+.market-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+.market-card-title { font-weight: 700; font-size: 14px; margin-bottom: 10px; color: var(--navy); display: flex; align-items: center; gap: 8px; }
+.market-card-title span { font-size: 18px; }
+.mlist { list-style: none; }
+.mlist li { font-size: 13px; color: var(--text2); padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; }
+.mlist li:last-child { border-bottom: none; }
+.mlist li::before { content: '→'; color: var(--blue); flex-shrink: 0; }
+
+/* COMPETITOR TABLE */
+tr.hl-row td { background: var(--blue-soft); font-weight: 600; }
+.tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.tag-adv { background: var(--green-soft); color: var(--green); }
+.tag-neu { background: var(--surface2);   color: var(--text2); }
+.tag-risk{ background: var(--red-soft);   color: var(--red); }
+
+/* RECS */
+.rec-list { display: grid; gap: 14px; }
+.rec-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; display: grid; grid-template-columns: 38px 1fr; gap: 14px; align-items: start; }
+.rec-num { font-size: 20px; font-weight: 800; color: var(--blue); font-variant-numeric: tabular-nums; line-height: 1; padding-top: 4px; }
+.rec-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 100px; margin-bottom: 6px; display: inline-block; }
+.rec-urgent { background: var(--red-soft);   color: var(--red); }
+.rec-mid    { background: var(--amber-soft); color: var(--amber); }
+.rec-ongoing{ background: var(--blue-soft);  color: var(--blue); }
+.rec-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; color: var(--navy); }
+.rec-body  { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+/* LIMITS */
+.limits-grid { display: grid; gap: 10px; padding: 16px 20px; font-size: 13px; color: var(--text2); }
+
+/* FOOTER */
+.report-footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text3); display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.fonte { font-size: 11px; color: var(--text3); margin-top: 10px; }
+.fonte a { color: var(--blue); text-decoration: none; }
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .impact-grid { grid-template-columns: 1fr; }
+  .spin-grid { grid-template-columns: repeat(2, 1fr); }
+  body { padding-inline: 14px; }
+}
+
+/* LANG SWITCH — hide inactive content */
+[data-lang="pt"] .en-only { display: none; }
+[data-lang="en"] .pt-only { display: none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">TripleTen Brasil · Sales Analysis</div>
+  <div class="topbar-controls">
+    <button class="btn btn-lang active" id="btn-pt" onclick="setLang('pt')" aria-label="Português">PT</button>
+    <button class="btn btn-lang" id="btn-en" onclick="setLang('en')" aria-label="English">EN</button>
+  </div>
+</div>
+
+<!-- ======= PORTUGUÊS ======= -->
+<div class="pt-only">
+<div class="report-eyebrow">TripleTen Brasil · Análise Comercial · Set 2026</div>
+<h1 class="report-title">Diagnóstico Completo de Não Fechamentos</h1>
+<p class="report-sub">Análise causal dos motivos de não conversão: execução comercial, qualidade de leads, produto, contexto econômico e posicionamento de mercado.</p>
+<div class="report-meta">
+  <div class="meta-item"><strong>Período:</strong> 1–17 set 2026</div>
+  <div class="meta-item"><strong>Deals analisados:</strong> 3.279 (HubSpot)</div>
+  <div class="meta-item"><strong>Reuniões avaliadas:</strong> 377 (Elephan scorecard)</div>
+  <div class="meta-item"><strong>Closers ativos:</strong> 11</div>
+</div>
+<div class="alert">
+  <div class="alert-icon">⚠️</div>
+  <div><strong>Limitação:</strong> O módulo de transcrições/insights do Elephan requer reautenticação — scorecard reflete sep 1–17. As conclusões de execução baseiam-se em scorecard; análise de transcrições individuais está pendente.</div>
+</div>
+</div>
+
+<!-- ======= ENGLISH ======= -->
+<div class="en-only">
+<div class="report-eyebrow">TripleTen Brasil · Commercial Analysis · Sep 2026</div>
+<h1 class="report-title">Sales Non-Closure: Full Causal Diagnosis</h1>
+<p class="report-sub">Evidence-based analysis of conversion failures across commercial execution, lead quality, product fit, economic context, and competitive positioning.</p>
+<div class="report-meta">
+  <div class="meta-item"><strong>Period:</strong> Sep 1–17 2026</div>
+  <div class="meta-item"><strong>Deals analyzed:</strong> 3,279 (HubSpot)</div>
+  <div class="meta-item"><strong>Meetings rated:</strong> 377 (Elephan scorecard)</div>
+  <div class="meta-item"><strong>Active closers:</strong> 11</div>
+</div>
+<div class="alert">
+  <div class="alert-icon">⚠️</div>
+  <div><strong>Data limitation:</strong> The Elephan transcription/insights module requires re-authentication — scorecard data reflects Sep 1–17. Execution conclusions rely on scorecard metrics; individual transcript analysis is pending.</div>
+</div>
+</div>
+
+<!-- ========== KPIs ========== -->
+<section class="section">
+  <h2 class="section-title pt-only">Panorama do Período</h2>
+  <h2 class="section-title en-only">Period Overview</h2>
+  <p class="section-desc pt-only">Indicadores-chave extraídos de HubSpot (pipeline Brazil / Sales) e Elephan scorecard.</p>
+  <p class="section-desc en-only">Key metrics from HubSpot (Brazil / Sales pipeline) and Elephan scorecard.</p>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label pt-only">Deals Perdidos</div><div class="kpi-label en-only">Closed Lost Deals</div><div class="kpi-value">3.279</div><div class="kpi-sub pt-only">HubSpot · set 1–17</div><div class="kpi-sub en-only">HubSpot · Sep 1–17</div></div>
+    <div class="kpi"><div class="kpi-label pt-only">Nunca Responderam</div><div class="kpi-label en-only">Never Replied</div><div class="kpi-value" style="color:var(--red)">48,8%</div><div class="kpi-sub">1.601 <span class="pt-only">leads sem engajamento</span><span class="en-only">leads — zero engagement</span></div></div>
+    <div class="kpi"><div class="kpi-label pt-only">Pararam de Responder</div><div class="kpi-label en-only">Stopped Answering</div><div class="kpi-value" style="color:var(--amber)">27,3%</div><div class="kpi-sub">894 <span class="pt-only">leads esfriaram</span><span class="en-only">leads went cold</span></div></div>
+    <div class="kpi"><div class="kpi-label pt-only">Barreira Financeira</div><div class="kpi-label en-only">Financial Barrier</div><div class="kpi-value" style="color:var(--purple)">6,2%</div><div class="kpi-sub pt-only">Sem dinheiro + caro demais</div><div class="kpi-sub en-only">No funds + Too expensive</div></div>
+    <div class="kpi"><div class="kpi-label pt-only">Média Scorecard</div><div class="kpi-label en-only">Scorecard Average</div><div class="kpi-value" style="color:var(--blue)">7,53</div><div class="kpi-sub pt-only">377 reuniões avaliadas</div><div class="kpi-sub en-only">377 rated meetings</div></div>
+    <div class="kpi"><div class="kpi-label pt-only">Gap Crítico (SPIN-I)</div><div class="kpi-label en-only">Critical Gap (SPIN-I)</div><div class="kpi-value" style="color:var(--red)">6,74</div><div class="kpi-sub pt-only">Aprofundamento de consequências</div><div class="kpi-sub en-only">Implication deepening</div></div>
+    <div class="kpi"><div class="kpi-label pt-only">Perdas p/ Concorrente</div><div class="kpi-label en-only">Lost to Competitor</div><div class="kpi-value">0,1%</div><div class="kpi-sub pt-only">4 registros no período</div><div class="kpi-sub en-only">4 records in period</div></div>
+    <div class="kpi"><div class="kpi-label">Selic (ago/26)</div><div class="kpi-value">14%</div><div class="kpi-sub pt-only">Crédito ainda restritivo</div><div class="kpi-sub en-only">Credit still restrictive</div></div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ========== IMPACT BY CATEGORY ========== -->
+<section class="section">
+  <h2 class="section-title pt-only">Impacto por Categoria Causal</h2>
+  <h2 class="section-title en-only">Impact by Causal Category</h2>
+  <p class="section-desc pt-only">Classificação dos 3.279 deals nas 6 categorias do framework. "Parou de responder" é ambíguo — distribuído parcialmente em Marketing e Indeterminado.</p>
+  <p class="section-desc en-only">All 3,279 closed-lost deals classified into 6 causal categories. "Stopped answering" is ambiguous — partially split between Marketing and Undetermined.</p>
+  <div class="impact-grid">
+    <div class="impact-card cat-b">
+      <div class="impact-cat pt-only">B — Marketing / Qualidade de Leads</div>
+      <div class="impact-cat en-only">B — Marketing / Lead Quality</div>
+      <div class="impact-label pt-only">Leads de baixo engajamento</div>
+      <div class="impact-label en-only">Low-intent leads</div>
+      <div class="impact-pct">~49%</div>
+      <div class="impact-desc pt-only">1.601 "nunca responderam" + 19 "nunca deixou solicitação". O maior driver de perda: leads gerados que nunca engajaram. Sinal de desalinhamento entre captação e intenção de compra real.</div>
+      <div class="impact-desc en-only">1,601 "never replied" + 19 "never left a request." The single largest loss driver: generated leads that never engaged. Clear signal of misalignment between acquisition targeting and real purchase intent.</div>
+    </div>
+    <div class="impact-card cat-e">
+      <div class="impact-cat pt-only">E — Comportamento do Lead (ambíguo)</div>
+      <div class="impact-cat en-only">E — Lead Behavior (ambiguous)</div>
+      <div class="impact-label pt-only">Lead esfriou pós-contato</div>
+      <div class="impact-label en-only">Lead went cold after contact</div>
+      <div class="impact-pct">~27%</div>
+      <div class="impact-desc pt-only">894 "Stopped answering". Parcialmente comportamento (baixo compromisso) e parcialmente execução (urgência e valor não criados). Sem transcrição, a separação de causas não é possível com precisão.</div>
+      <div class="impact-desc en-only">894 "Stopped answering." Partially lead behavior (low commitment) and partially execution failure (urgency and value not created). Without transcripts, precise separation is not possible.</div>
+    </div>
+    <div class="impact-card cat-a">
+      <div class="impact-cat pt-only">A — Execução Comercial</div>
+      <div class="impact-cat en-only">A — Commercial Execution</div>
+      <div class="impact-label pt-only">Execução parcialmente comprometida</div>
+      <div class="impact-label en-only">Partially compromised execution</div>
+      <div class="impact-pct">~5%</div>
+      <div class="impact-desc pt-only">Scorecard revela gap sistêmico em Consequências (6,74), Urgência (6,94) e Fechamento (7,19). Representa leads que chegaram à reunião mas não converteram por falha de execução.</div>
+      <div class="impact-desc en-only">Scorecard reveals systemic gaps in Implication (6.74), Urgency (6.94) and Closing (7.19). Represents leads who attended meetings but did not convert due to execution failure.</div>
+    </div>
+    <div class="impact-card cat-d">
+      <div class="impact-cat pt-only">D — Contexto Econômico</div>
+      <div class="impact-cat en-only">D — Economic Context</div>
+      <div class="impact-label pt-only">Barreira financeira real</div>
+      <div class="impact-label en-only">Genuine financial barrier</div>
+      <div class="impact-pct">~6%</div>
+      <div class="impact-desc pt-only">178 "sem fundos" + 22 "muito caro" + 4 "formas de pagamento inadequadas". Selic a 14%, inflação persistente e renda comprimida criam barreira objetiva para um ticket de R$15–22k.</div>
+      <div class="impact-desc en-only">178 "no funds" + 22 "too expensive" + 4 "unsuitable payment methods." Selic at 14%, persistent inflation, and compressed household income create objective barriers for a R$15–22k ticket.</div>
+    </div>
+    <div class="impact-card cat-c">
+      <div class="impact-cat pt-only">C — Produto / Timing / Oferta</div>
+      <div class="impact-cat en-only">C — Product / Timing / Offer</div>
+      <div class="impact-label pt-only">Timing e encaixe produto-lead</div>
+      <div class="impact-label en-only">Timing and product-lead fit</div>
+      <div class="impact-pct">~3%</div>
+      <div class="impact-desc pt-only">77 "não pronto" + 15 "baixa prioridade" + 8 "sem tempo" + 5 "achou que era grátis" + 2 "sem profissão TI adequada". Produto certo, contexto errado — questão de timing e qualificação.</div>
+      <div class="impact-desc en-only">77 "not ready to start now" + 15 "low priority" + 8 "no time to study" + 5 "thought it was free" + 2 "no suitable IT role." Right product, wrong moment — a timing and qualification issue.</div>
+    </div>
+    <div class="impact-card cat-f">
+      <div class="impact-cat pt-only">F — Operacional / Indeterminado</div>
+      <div class="impact-cat en-only">F — Operational / Undetermined</div>
+      <div class="impact-label pt-only">Duplicatas e sem evidência</div>
+      <div class="impact-label en-only">Duplicates and no evidence</div>
+      <div class="impact-pct">~10%</div>
+      <div class="impact-desc pt-only">343 duplicatas + 110 número errado + outros operacionais. Ruído de processo no CRM — indicam necessidade de higiene de dados e qualificação antes da distribuição.</div>
+      <div class="impact-desc en-only">343 duplicates + 110 wrong numbers + other operational. CRM process noise — indicates need for data hygiene and lead qualification before distribution.</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ========== HUBSPOT DETAIL ========== -->
+<section class="section">
+  <h2 class="section-title pt-only">Detalhamento HubSpot — Motivos de Perda</h2>
+  <h2 class="section-title en-only">HubSpot Detail — Loss Reasons</h2>
+  <p class="section-desc pt-only">Universo completo de 3.279 deals do pipeline Brazil / Sales fechados como "closed lost" em 1–17 set 2026.</p>
+  <p class="section-desc en-only">Complete universe of 3,279 deals in the Brazil / Sales pipeline marked "closed lost" Sep 1–17 2026.</p>
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="min-width:230px" class="pt-only">Motivo</th>
+          <th style="min-width:230px" class="en-only">Reason</th>
+          <th class="pt-only">Categoria</th>
+          <th class="en-only">Category</th>
+          <th style="min-width:160px" class="pt-only">Volume</th>
+          <th style="min-width:160px" class="en-only">Volume</th>
+          <th>Qtd</th>
+          <th>%</th>
+        </tr></thead>
+        <tbody id="reason-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <p class="fonte pt-only">Fonte: HubSpot CRM · pipeline "Brazil / Sales" · dealstage closed-lost · set 1–17 2026</p>
+  <p class="fonte en-only">Source: HubSpot CRM · pipeline "Brazil / Sales" · dealstage closed-lost · Sep 1–17 2026</p>
+</section>
+
+<hr class="divider">
+
+<!-- ========== SCORECARD ========== -->
+<section class="section">
+  <h2 class="section-title pt-only">Scorecard de Execução — Elephan</h2>
+  <h2 class="section-title en-only">Execution Scorecard — Elephan</h2>
+  <p class="section-desc pt-only">377 reuniões avaliadas pelo framework SPIN Selling (10 dimensões). Closers ativos (status A). Médias ponderadas por volume. Chip: ≥7,8 verde · ≥7,0 azul · ≥6,5 âmbar · &lt;6,5 vermelho.</p>
+  <p class="section-desc en-only">377 meetings rated across 10 SPIN Selling dimensions. Active closers only (status A). Weighted averages by meeting volume. Chip: ≥7.8 green · ≥7.0 blue · ≥6.5 amber · &lt;6.5 red.</p>
+
+  <div class="spin-grid">
+    <div class="spin-card spin-s">
+      <div class="spin-letter">S</div>
+      <div class="spin-name pt-only">Situação</div>
+      <div class="spin-name en-only">Situation</div>
+      <div class="spin-score">8,00</div>
+      <div class="spin-verdict pt-only">✅ Abertura (7,92) + Investigação (8,09) + Identificação (7,91). Time domina diagnóstico — entendimento do contexto consolidado.</div>
+      <div class="spin-verdict en-only">✅ Opening (7.92) + Context Investigation (8.09) + Problem ID (7.91). The team owns the diagnosis phase — context understanding is solid.</div>
+    </div>
+    <div class="spin-card spin-p">
+      <div class="spin-letter">P</div>
+      <div class="spin-name pt-only">Problema</div>
+      <div class="spin-name en-only">Problem</div>
+      <div class="spin-score">8,21</div>
+      <div class="spin-verdict pt-only">✅ Conexão solução-dor (8,21) é o ponto mais forte. O produto é bem posicionado em relação à dor quando o closer chega a essa fase.</div>
+      <div class="spin-verdict en-only">✅ Solution-pain connection (8.21) is the team's strongest point. The product is well positioned against the lead's pain when the closer reaches this stage.</div>
+    </div>
+    <div class="spin-card spin-i">
+      <div class="spin-letter">I</div>
+      <div class="spin-name pt-only">Implicação</div>
+      <div class="spin-name en-only">Implication</div>
+      <div class="spin-score">6,74</div>
+      <div class="spin-verdict pt-only">❌ Gap crítico e sistêmico. Aprofundamento de consequências é o ponto mais fraco do time inteiro. Nenhum closer atingiu 8,0. Sem urgência emocional criada, objeções de preço vencem.</div>
+      <div class="spin-verdict en-only">❌ Critical systemic gap. Implication deepening is the team's weakest dimension — no closer reached 8.0. Without emotional urgency, price objections win every time.</div>
+    </div>
+    <div class="spin-card spin-n">
+      <div class="spin-letter">N</div>
+      <div class="spin-name pt-only">Need-Payoff</div>
+      <div class="spin-name en-only">Need-Payoff</div>
+      <div class="spin-score">7,17</div>
+      <div class="spin-verdict pt-only">⚠️ Verbalização (7,12), Urgência (6,94) e Fechamento (7,19) abaixo do ideal. Lead não verbaliza o valor percebido antes do fechamento — fragiliza a decisão de compra.</div>
+      <div class="spin-verdict en-only">⚠️ Verbalization (7.12), Urgency (6.94) and Closing (7.19) below target. Leads don't verbalize perceived value before closing — weakening the purchase decision.</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="min-width:140px; text-align:left">Closer</th>
+          <th class="center">Mtgs</th>
+          <th class="center pt-only" title="Média geral">Geral</th>
+          <th class="center en-only" title="Overall average">Overall</th>
+          <th class="center" style="background:rgba(220,38,38,.06)" title="SPIN-I Consequências / Implication">Impl.</th>
+          <th class="center pt-only">Urgência</th><th class="center en-only">Urgency</th>
+          <th class="center pt-only">Fecha.</th><th class="center en-only">Closing</th>
+          <th class="center">SDR</th>
+          <th class="center pt-only">Abertura</th><th class="center en-only">Opening</th>
+          <th class="center pt-only">Invest.</th><th class="center en-only">Invest.</th>
+          <th class="center pt-only">Identif.</th><th class="center en-only">Probl.</th>
+          <th class="center pt-only">Conexão</th><th class="center en-only">Solution</th>
+          <th class="center pt-only">Verbal.</th><th class="center en-only">Verbal.</th>
+          <th class="center pt-only">Condução</th><th class="center en-only">Logic</th>
+        </tr></thead>
+        <tbody id="scorecard-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <p class="fonte pt-only">Fonte: Elephan scorecard_by_seller · set 1–17 2026 · somente closers ativos</p>
+  <p class="fonte en-only">Source: Elephan scorecard_by_seller · Sep 1–17 2026 · active closers only</p>
+</section>
+
+<hr class="divider">
+
+<!-- ========== MARKET ========== -->
+<section class="section">
+  <h2 class="section-title pt-only">Análise de Mercado e Contexto</h2>
+  <h2 class="section-title en-only">Market Analysis and Context</h2>
+  <p class="section-desc pt-only">Fatores externos que influenciam a conversão: macroeconomia, competidores e comportamento de compra no setor edtech B2C Brasil.</p>
+  <p class="section-desc en-only">External factors affecting conversion: macroeconomics, competition, and consumer purchase behavior in Brazil's B2C edtech sector.</p>
+
+  <div class="market-grid">
+    <div class="market-card">
+      <div class="market-card-title"><span>🏦</span> <span class="pt-only">Contexto Macroeconômico 2026</span><span class="en-only">Macro Context Brazil 2026</span></div>
+      <ul class="mlist">
+        <li class="pt-only">Selic a 14% a.a. (queda desde jan/26, ainda elevada) — crédito caro, parcelas pesadas</li>
+        <li class="en-only">Selic rate at 14% p.a. (declining since Jan/26, still high) — expensive credit, heavy installments</li>
+        <li class="pt-only">IPCA persistente em ~6% — comprime renda real das famílias de média renda</li>
+        <li class="en-only">Persistent IPCA ~6% — compresses real income for middle-income households</li>
+        <li class="pt-only">Mercado de crédito desacelerado no 2º semestre — desafio para parcelamentos longos</li>
+        <li class="en-only">Credit market decelerating in H2 — challenge for long-term installment plans</li>
+        <li class="pt-only">Ticket de R$15–22k em parcelamento cria barreira real, não apenas percebida</li>
+        <li class="en-only">R$15–22k ticket in installments creates a real, not just perceived, barrier</li>
+      </ul>
+    </div>
+    <div class="market-card">
+      <div class="market-card-title"><span>📚</span> <span class="pt-only">Mercado EdTech Brasil 2026</span><span class="en-only">EdTech Market Brazil 2026</span></div>
+      <ul class="mlist">
+        <li class="pt-only">Brasil concentra ~70% das edtechs da América Latina — mercado maduro e competitivo</li>
+        <li class="en-only">Brazil hosts ~70% of LatAm edtechs — mature, highly competitive market</li>
+        <li class="pt-only">"Hype acabou" — mercado exige resultado tangível e empregabilidade comprovada</li>
+        <li class="en-only">"The hype is over" — market now demands tangible outcomes and proven employability</li>
+        <li class="pt-only">Consumidor pesquisa mais antes de comprar — ciclo de decisão mais longo em 2026</li>
+        <li class="en-only">Consumers research more before buying — decision cycle is longer in 2026</li>
+        <li class="pt-only">IA no currículo e snackable learning ganham tração como diferenciais decisivos</li>
+        <li class="en-only">AI curriculum and snackable learning gaining traction as decisive differentiators</li>
+      </ul>
+    </div>
+    <div class="market-card">
+      <div class="market-card-title"><span>💼</span> <span class="pt-only">Mercado de Trabalho em TI 2026</span><span class="en-only">Tech Job Market 2026</span></div>
+      <ul class="mlist">
+        <li class="pt-only">Setor de TI aquecido: 1.000+ vagas abertas em jan/26 — ROI do bootcamp validado</li>
+        <li class="en-only">Tech sector hot: 1,000+ open roles in Jan/26 — bootcamp ROI validated externally</li>
+        <li class="pt-only">IA cria novas profissões e requalifica perfis — demanda por requalificação real</li>
+        <li class="en-only">AI creating new roles and requalifying profiles — genuine upskilling demand exists</li>
+        <li class="pt-only">Empregabilidade pós-bootcamp vira argumento central de venda (82–87% em 6 meses)</li>
+        <li class="en-only">Post-bootcamp employment rate is now the central sales argument (82–87% in 6 months)</li>
+      </ul>
+    </div>
+    <div class="market-card">
+      <div class="market-card-title"><span>🧠</span> <span class="pt-only">Comportamento de Compra</span><span class="en-only">Consumer Purchase Behavior</span></div>
+      <ul class="mlist">
+        <li class="pt-only">2 em cada 3 consumidores trocaram de marca em 2026 — lealdade baixa, comparação alta</li>
+        <li class="en-only">2 in 3 consumers switched brands in 2026 — low loyalty, high comparison behavior</li>
+        <li class="pt-only">Decisão de bootcamp é de alto envolvimento — múltipla pesquisa antes de decidir</li>
+        <li class="en-only">Bootcamp is a high-involvement purchase — multiple research touchpoints before deciding</li>
+        <li class="pt-only">Gatilhos: garantia de emprego, avaliações reais e depoimentos verificáveis</li>
+        <li class="en-only">Key triggers: job guarantee, genuine reviews, and verifiable testimonials</li>
+        <li class="pt-only">Leads que "nunca responderam" podem ter comprado em outro canal sem comunicar</li>
+        <li class="en-only">"Never replied" leads may have converted elsewhere without notifying TripleTen</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- COMPETITORS -->
+<section class="section">
+  <h2 class="section-title pt-only">Posicionamento Competitivo</h2>
+  <h2 class="section-title en-only">Competitive Positioning</h2>
+  <p class="section-desc pt-only">Principais bootcamps concorrentes no Brasil. TripleTen destaca-se pela garantia de emprego mas enfrenta pressão de preço e de brand awareness local.</p>
+  <p class="section-desc en-only">Top competing bootcamps in Brazil. TripleTen's job guarantee is a clear differentiator, but faces price pressure and local brand awareness gaps.</p>
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th>Bootcamp</th>
+          <th class="pt-only">Preço (R$)</th><th class="en-only">Price (R$)</th>
+          <th class="pt-only">Modelo</th><th class="en-only">Model</th>
+          <th class="pt-only">Diferencial</th><th class="en-only">Key differentiator</th>
+          <th class="pt-only">vs. TripleTen</th><th class="en-only">vs. TripleTen</th>
+        </tr></thead>
+        <tbody id="comp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <p class="fonte"><a href="https://www.nucamp.co/blog/coding-bootcamp-brazil-bra-top-5-best-coding-bootcamps-in-brazil-in-2025" target="_blank">Nucamp · Top Bootcamps Brazil 2026</a></p>
+
+  <div style="margin-top:20px; display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:14px;">
+    <div class="market-card">
+      <div class="market-card-title"><span>✅</span> <span class="pt-only">Vantagens TripleTen</span><span class="en-only">TripleTen Strengths</span></div>
+      <ul class="mlist">
+        <li class="pt-only">Única garantia de 100% reembolso se não empregar em 6 meses — diferencial claro</li>
+        <li class="en-only">Only 100% refund guarantee if no job within 6 months — unmatched differentiator</li>
+        <li class="pt-only">Ticket equilibrado — mais barato que Trybe/Kenzie, posicionado acima de Rocketseat</li>
+        <li class="en-only">Balanced ticket — cheaper than Trybe/Kenzie, positioned above Rocketseat</li>
+        <li class="pt-only">82–87% empregabilidade com suporte de 10 meses pós-formação</li>
+        <li class="en-only">82–87% employment rate with 10-month post-graduation career support</li>
+        <li class="pt-only">Modelo online B2C escalável — sem limitação geográfica</li>
+        <li class="en-only">Scalable B2C online model — no geographic ceiling</li>
+      </ul>
+    </div>
+    <div class="market-card">
+      <div class="market-card-title"><span>⚠️</span> <span class="pt-only">Gaps e Riscos</span><span class="en-only">Gaps and Risks</span></div>
+      <ul class="mlist">
+        <li class="pt-only">Menos conhecida localmente vs. Trybe/Le Wagon — déficit de brand awareness no Brasil</li>
+        <li class="en-only">Less known locally vs. Trybe/Le Wagon — brand awareness deficit in Brazil</li>
+        <li class="pt-only">"Achou que era grátis" (5) e "achou que era vaga de emprego" (3) = desalinhamento de copy</li>
+        <li class="en-only">"Thought it was free" (5) and "thought it was a job offer" (3) = messaging misalignment</li>
+        <li class="pt-only">Concorrência de preço intensa com Rocketseat/Nucamp para público com orçamento limitado</li>
+        <li class="en-only">Intense price competition from Rocketseat/Nucamp for budget-constrained audiences</li>
+        <li class="pt-only">Provas sociais locais (depoimentos de brasileiros empregados) ainda em construção</li>
+        <li class="en-only">Local social proof (Brazilian employed alumni testimonials) still being built</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ========== RECOMMENDATIONS ========== -->
+<section class="section">
+  <h2 class="section-title pt-only">Recomendações Priorizadas</h2>
+  <h2 class="section-title en-only">Prioritized Recommendations</h2>
+  <p class="section-desc pt-only">Ações ordenadas por impacto esperado. Baseadas em evidências — sem inferência sem dado de suporte.</p>
+  <p class="section-desc en-only">Actions ordered by expected impact. Evidence-based — no recommendation without supporting data.</p>
+  <div class="rec-list" id="rec-list"></div>
+</section>
+
+<hr class="divider">
+
+<!-- ========== LIMITATIONS ========== -->
+<section class="section">
+  <h2 class="section-title pt-only">Limitações desta Análise</h2>
+  <h2 class="section-title en-only">Analysis Limitations</h2>
+  <div class="table-wrap">
+    <div class="limits-grid">
+      <div>🔴 <strong class="pt-only">Transcrições Elephan:</strong><strong class="en-only">Elephan transcripts:</strong> <span class="pt-only">Endpoints de transcrição retornaram erro de sessão. Análise por transcrição individual está pendente — sem ela, os 894 "Stopped answering" não podem ser separados entre execução e comportamento do lead.</span><span class="en-only">Transcription endpoints returned session errors. Individual transcript analysis is pending — without it, the 894 "Stopped answering" cases cannot be split between execution and lead behavior.</span></div>
+      <div>🟡 <strong class="pt-only">Scorecard apenas:</strong><strong class="en-only">Scorecard only:</strong> <span class="pt-only">Avaliações de scorecard medem o que o closer faz, não o resultado (fechou ou não). Correlação com taxa de fechamento requer cruzamento de dados ainda não realizado.</span><span class="en-only">Scorecard ratings measure what the closer does, not the outcome. Correlation with close rate requires data cross-referencing not yet performed.</span></div>
+      <div>🟡 <strong class="pt-only">HubSpot — owner por deal:</strong><strong class="en-only">HubSpot — deal owner:</strong> <span class="pt-only">O campo hubspot_owner_id não foi cruzado com IDs dos closers Elephan. Análise de motivos de perda por closer seria mais precisa com esse mapeamento.</span><span class="en-only">The hubspot_owner_id field was not matched to Elephan closer IDs. Loss reason analysis per closer would be more precise with this mapping.</span></div>
+      <div>🟢 <strong class="pt-only">HubSpot — cobertura total:</strong><strong class="en-only">HubSpot — full coverage:</strong> <span class="pt-only">A query SQL retornou o universo completo de deals closed-lost no período — sem truncamento.</span><span class="en-only">The SQL query returned the complete universe of closed-lost deals in the period — no truncation.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div class="report-footer">
+  <div>TripleTen Brasil · <span class="pt-only">Análise Comercial</span><span class="en-only">Sales Analysis</span> · Set/Sep 2026</div>
+  <div class="pt-only">Fontes: HubSpot CRM · Elephan · <a href="https://startups.com.br/artigo/edtech-em-2026-o-hype-acabou-agora-e-hora-de-provar-valor-real-e-impactos-significativos/" target="_blank">Startups.com.br</a> · <a href="https://blog.nubank.com.br/taxa-selic-2026/" target="_blank">Nubank Blog Selic 2026</a></div>
+  <div class="en-only">Sources: HubSpot CRM · Elephan · <a href="https://startups.com.br/artigo/edtech-em-2026-o-hype-acabou-agora-e-hora-de-provar-valor-real-e-impactos-significativos/" target="_blank">Startups.com.br</a> · <a href="https://blog.nubank.com.br/taxa-selic-2026/" target="_blank">Nubank Blog Selic 2026</a></div>
+</div>
+
+</div><!-- .page -->
+
+<script>
+// ===================== LANGUAGE =====================
+function setLang(lang) {
+  document.documentElement.setAttribute('data-lang', lang);
+  document.getElementById('btn-pt').classList.toggle('active', lang === 'pt');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  try { localStorage.setItem('tt-lang', lang); } catch(e) {}
+}
+try { const saved = localStorage.getItem('tt-lang'); if (saved) setLang(saved); } catch(e) {}
+
+// ===================== DATA =====================
+const reasons = [
+  { pt: 'Nunca responderam',              en: 'Never replied',               count: 1601, cat: 'B', color: '#dc2626' },
+  { pt: 'Parou de responder',             en: 'Stopped answering',           count: 894,  cat: 'E', color: '#d97706' },
+  { pt: 'Duplicata',                      en: 'Duplicate',                   count: 343,  cat: 'OP',color: '#8a9ab0' },
+  { pt: 'Sem fundos',                     en: 'No funds',                    count: 178,  cat: 'D', color: '#7c3aed' },
+  { pt: 'Não interessado',                en: 'Not interested',              count: 108,  cat: 'A', color: '#2563eb' },
+  { pt: 'Número errado',                  en: 'Wrong number',                count: 110,  cat: 'OP',color: '#8a9ab0' },
+  { pt: 'Não está pronto para começar',   en: 'Not ready to start now',      count: 77,   cat: 'C', color: '#0d9488' },
+  { pt: 'Muito caro',                     en: 'Too expensive',               count: 22,   cat: 'D', color: '#7c3aed' },
+  { pt: 'Sem computador',                 en: 'No computer',                 count: 19,   cat: 'C', color: '#0d9488' },
+  { pt: 'Nunca deixou solicitação',       en: 'Never left the request',      count: 19,   cat: 'B', color: '#dc2626' },
+  { pt: 'Baixa prioridade',               en: 'Low priority',                count: 15,   cat: 'C', color: '#0d9488' },
+  { pt: 'Sem tempo de estudar',           en: 'Have no time to study',       count: 8,    cat: 'C', color: '#0d9488' },
+  { pt: 'Achou que era grátis',           en: 'Thought the course is free',  count: 5,    cat: 'B', color: '#dc2626' },
+  { pt: 'Formas de pagamento inadequadas',en: 'Payment methods not suitable',count: 4,    cat: 'D', color: '#7c3aed' },
+  { pt: 'País errado',                    en: 'Wrong country',               count: 4,    cat: 'OP',color: '#8a9ab0' },
+  { pt: 'Selecionou concorrente',         en: 'Selected competitor',         count: 4,    cat: 'C', color: '#0d9488' },
+  { pt: 'Teste',                          en: 'Test',                        count: 4,    cat: 'OP',color: '#8a9ab0' },
+  { pt: 'Achou que era vaga de emprego',  en: "Thought it's a job offer",    count: 3,    cat: 'B', color: '#dc2626' },
+  { pt: 'Bloqueou no WhatsApp',           en: 'Blocked on WhatsApp',         count: 3,    cat: 'E', color: '#d97706' },
+  { pt: 'Sem profissão de TI adequada',   en: 'No suitable IT profession',   count: 2,    cat: 'C', color: '#0d9488' },
+  { pt: 'Faixa etária errada',            en: 'Wrong age',                   count: 1,    cat: 'OP',color: '#8a9ab0' },
+  { pt: 'Reunião não compareceu',         en: 'Meeting not attended',        count: 1,    cat: 'E', color: '#d97706' },
+  { pt: 'Cliente analfabeto',             en: 'Client is illiterate',        count: 1,    cat: 'OP',color: '#8a9ab0' },
+  { pt: 'Não atribuído',                  en: 'Unassigned',                  count: 1,    cat: 'OP',color: '#8a9ab0' },
+];
+
+const catLabel = {
+  B:  { pt: 'Marketing',           en: 'Marketing' },
+  E:  { pt: 'Comportamento',       en: 'Behavior'  },
+  A:  { pt: 'Execução',            en: 'Execution' },
+  D:  { pt: 'Econômico',           en: 'Economic'  },
+  C:  { pt: 'Produto/Timing',      en: 'Product'   },
+  OP: { pt: 'Operacional',         en: 'Operational'},
+};
+const badgeCls = { B:'badge-b', E:'badge-e', A:'badge-a', D:'badge-d', C:'badge-c', OP:'badge-op' };
+const total = reasons.reduce((s,r) => s+r.count, 0);
+const maxCount = reasons[0].count;
+
+function renderReasons() {
+  const lang = document.documentElement.getAttribute('data-lang') || 'pt';
+  const tbody = document.getElementById('reason-tbody');
+  tbody.innerHTML = reasons.map(r => {
+    const pct = (r.count/total*100).toFixed(1);
+    const barW = (r.count/maxCount*100).toFixed(1);
+    const label = catLabel[r.cat][lang];
+    return `<tr>
+      <td>${r[lang]}</td>
+      <td><span class="cat-badge ${badgeCls[r.cat]}">${r.cat}</span> <span class="muted">${label}</span></td>
+      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${barW}%;background:${r.color}"></div></div></div></td>
+      <td class="num" style="text-align:right">${r.count.toLocaleString('pt-BR')}</td>
+      <td class="muted" style="text-align:right">${pct}%</td>
+    </tr>`;
+  }).join('');
+}
+
+// ===================== SCORECARD =====================
+const sellers = [
+  { name: "Yanara Silva",        meetings: 36, avg: 8.17, cons: 7.39, urg: 7.64, fech: 8.11, sdr: 7.97, abertura: 8.19, inv: 8.69, ide: 8.36, con: 8.86, verb: 7.86, cond: 8.58 },
+  { name: "Gabriel Morial",      meetings: 40, avg: 7.96, cons: 7.30, urg: 7.23, fech: 7.40, sdr: 6.88, abertura: 8.82, inv: 8.68, ide: 8.57, con: 8.63, verb: 7.63, cond: 8.50 },
+  { name: "Jessica Silva",       meetings: 43, avg: 7.88, cons: 7.12, urg: 7.42, fech: 7.47, sdr: 7.91, abertura: 8.30, inv: 8.23, ide: 8.19, con: 8.56, verb: 7.53, cond: 8.07 },
+  { name: "Bruno Marques",       meetings: 41, avg: 7.78, cons: 6.95, urg: 7.00, fech: 7.46, sdr: 7.88, abertura: 8.44, inv: 8.44, ide: 8.15, con: 8.15, verb: 7.07, cond: 8.30 },
+  { name: "Roberto Branco",      meetings: 6,  avg: 7.78, cons: 7.00, urg: 7.17, fech: 7.67, sdr: 7.67, abertura: 8.00, inv: 8.17, ide: 8.00, con: 8.33, verb: 7.50, cond: 8.33, small: true },
+  { name: "Lucas Bonow",         meetings: 42, avg: 7.71, cons: 6.88, urg: 7.02, fech: 7.10, sdr: 7.95, abertura: 7.67, inv: 8.45, ide: 8.29, con: 8.52, verb: 7.00, cond: 8.24 },
+  { name: "Erick Paiva",         meetings: 44, avg: 7.33, cons: 6.64, urg: 6.91, fech: 7.23, sdr: 6.84, abertura: 7.30, inv: 7.86, ide: 7.80, con: 8.00, verb: 7.16, cond: 7.59 },
+  { name: "Vinicius Leão",       meetings: 22, avg: 7.26, cons: 6.32, urg: 6.77, fech: 6.77, sdr: 7.36, abertura: 7.59, inv: 8.00, ide: 7.64, con: 7.91, verb: 6.68, cond: 7.59 },
+  { name: "Natalia Martins",     meetings: 7,  avg: 7.13, cons: 6.14, urg: 6.57, fech: 6.71, sdr: 7.14, abertura: 7.86, inv: 7.71, ide: 7.00, con: 7.71, verb: 7.00, cond: 7.43, small: true },
+  { name: "Ana Viana",           meetings: 3,  avg: 6.97, cons: 6.00, urg: 6.33, fech: 7.67, sdr: 7.33, abertura: 4.67, inv: 7.00, ide: 7.67, con: 8.67, verb: 6.67, cond: 7.67, small: true },
+  { name: "Raphael Soares Luna", meetings: 53, avg: 7.00, cons: 6.23, urg: 6.36, fech: 6.72, sdr: 6.28, abertura: 7.79, inv: 7.55, ide: 7.30, con: 7.75, verb: 6.72, cond: 7.38 },
+  { name: "Daniel Augusto",      meetings: 40, avg: 6.87, cons: 5.98, urg: 6.35, fech: 6.43, sdr: 6.98, abertura: 7.40, inv: 7.25, ide: 7.13, con: 7.60, verb: 6.45, cond: 7.15 },
+];
+const teamAvg = { meetings: 377, avg: 7.53, cons: 6.74, urg: 6.94, fech: 7.19, sdr: 7.30, abertura: 7.92, inv: 8.09, ide: 7.91, con: 8.21, verb: 7.12, cond: 7.92 };
+
+function chip(v) {
+  const cls = v >= 7.8 ? 'chip-good' : v >= 7.0 ? 'chip-ok' : v >= 6.5 ? 'chip-warn' : 'chip-crit';
+  return `<span class="chip ${cls}">${v.toFixed(2)}</span>`;
+}
+function sellerRow(s, isAvg) {
+  const sm = s.small ? ' <span class="small-note">*amostra pequena</span>' : '';
+  const cls = isAvg ? 'team-avg' : '';
+  const nameCell = isAvg ? '📊 Média Ponderada / Weighted Avg' : s.name + sm;
+  return `<tr class="${cls}">
+    <td>${nameCell}</td>
+    <td class="center"><span class="mtg-badge">${s.meetings}</span></td>
+    <td class="center">${chip(s.avg)}</td>
+    <td class="center highlight-col">${chip(s.cons)}</td>
+    <td class="center">${chip(s.urg)}</td>
+    <td class="center">${chip(s.fech)}</td>
+    <td class="center">${chip(s.sdr)}</td>
+    <td class="center">${chip(s.abertura)}</td>
+    <td class="center">${chip(s.inv)}</td>
+    <td class="center">${chip(s.ide)}</td>
+    <td class="center">${chip(s.con)}</td>
+    <td class="center">${chip(s.verb)}</td>
+    <td class="center">${chip(s.cond)}</td>
+  </tr>`;
+}
+
+document.getElementById('scorecard-tbody').innerHTML =
+  sellers.map(s => sellerRow(s, false)).join('') + sellerRow(teamAvg, true);
+
+// ===================== COMPETITORS =====================
+const comps = [
+  { name: 'TripleTen', price: '15.000–22.000', model: { pt: 'Online · 5–9 meses', en: 'Online · 5–9 months' }, diff: { pt: 'Garantia 100% emprego ou reembolso', en: '100% job guarantee or refund' }, tag: null, highlight: true },
+  { name: 'Rocketseat', price: '3.000–6.000', model: { pt: 'Online · flexível', en: 'Online · flexible' }, diff: { pt: 'Comunidade enorme, preço imbatível', en: 'Huge community, unbeatable price' }, tag: 'risk' },
+  { name: 'Nucamp', price: '10.620–19.900', model: { pt: 'Online · 200+ cidades', en: 'Online · 200+ cities' }, diff: { pt: 'Custo-benefício, 78% empregabilidade', en: 'Best value, 78% employment rate' }, tag: 'risk' },
+  { name: 'Le Wagon', price: '~21.900', model: { pt: 'Intensivo · 9 semanas', en: 'Intensive · 9 weeks' }, diff: { pt: 'Rede Nubank/ML; foco Data Science', en: 'Nubank/ML network; Data Science focus' }, tag: 'neu' },
+  { name: 'Ironhack', price: '18.000–25.000', model: { pt: 'Híbrido SP · ISA', en: 'Hybrid SP · ISA' }, diff: { pt: 'Campus físico, 85% empregabilidade', en: 'Physical campus, 85% employment' }, tag: 'neu' },
+  { name: 'Trybe', price: '25.000–30.000', model: { pt: 'Online · 12 meses · ISA', en: 'Online · 12 months · ISA' }, diff: { pt: '+90% empregabilidade; Full-Stack', en: '+90% employment; Full-Stack' }, tag: 'adv' },
+  { name: 'Kenzie Academy', price: '~25.000', model: { pt: 'Online · 12 meses · ISA', en: 'Online · 12 months · ISA' }, diff: { pt: 'Full-Stack; hub Curitiba', en: 'Full-Stack; Curitiba hub' }, tag: 'adv' },
+  { name: 'Digital House', price: '12.000–18.000', model: { pt: 'Híbrido', en: 'Hybrid' }, diff: { pt: 'Certified Tech Developer (Mercado Livre)', en: 'Certified Tech Developer (Mercado Livre)' }, tag: 'neu' },
+  { name: 'Tera', price: '8.000–12.000', model: { pt: 'Online · curtos', en: 'Online · short courses' }, diff: { pt: 'Upskilling; parcerias corporativas', en: 'Upskilling; corporate partnerships' }, tag: 'neu' },
+];
+const tagLabel = {
+  risk: { pt: '<span class="tag tag-risk">Risco: preço</span>', en: '<span class="tag tag-risk">Price risk</span>' },
+  neu:  { pt: '<span class="tag tag-neu">Similar</span>', en: '<span class="tag tag-neu">Similar</span>' },
+  adv:  { pt: '<span class="tag tag-adv">TT mais barato</span>', en: '<span class="tag tag-adv">TT cheaper</span>' },
+};
+
+function renderComps() {
+  const lang = document.documentElement.getAttribute('data-lang') || 'pt';
+  document.getElementById('comp-tbody').innerHTML = comps.map(c => {
+    const hl = c.highlight ? 'hl-row' : '';
+    const tag = c.tag ? tagLabel[c.tag][lang] : '—';
+    return `<tr class="${hl}">
+      <td>${c.highlight ? '<strong>' + c.name + '</strong>' : c.name}</td>
+      <td class="num">${c.price}</td>
+      <td>${c.model[lang]}</td>
+      <td>${c.diff[lang]}</td>
+      <td>${tag}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ===================== RECS =====================
+const recs = [
+  {
+    tagPt: 'Urgente · Marketing', tagEn: 'Urgent · Marketing', tagCls: 'rec-urgent',
+    titlePt: 'Revisar critérios de qualificação de lead na captação',
+    titleEn: 'Revise lead qualification criteria in acquisition',
+    bodyPt: 'Evidência: 48,8% dos deals perdidos = leads que nunca responderam. Volume de captação não é o problema — a intenção de compra é. Revisar segmentação nos criativos de tráfego pago: personas com renda para o produto, interesse real em mudança de carreira e disponibilidade de tempo. Testar questionários de qualificação pré-distribuição para o closer.',
+    bodyEn: 'Evidence: 48.8% of lost deals = leads who never replied. Lead volume is not the problem — purchase intent is. Revise paid traffic audience segmentation: personas with income for the product, genuine career-change intent, and available time. Test qualification questionnaires before assigning leads to closers.',
+  },
+  {
+    tagPt: 'Urgente · Marketing', tagEn: 'Urgent · Marketing', tagCls: 'rec-urgent',
+    titlePt: 'Corrigir mensagem de captação — expectativa de produto',
+    titleEn: 'Fix acquisition messaging — product expectation alignment',
+    bodyPt: 'Evidência: leads que "acharam que era emprego" (3) ou "acharam que era grátis" (5) indicam criativos desalinhados. Revisar copy e CTA de todos os canais para comunicar claramente: (a) produto pago, (b) formação, não vaga, (c) investimento aproximado na jornada.',
+    bodyEn: 'Evidence: leads who "thought it was a job offer" (3) or "thought it was free" (5) indicate misaligned creatives. Audit copy and CTA across all channels to clearly communicate: (a) paid product, (b) education program, not a job opening, (c) approximate investment level in the decision journey.',
+  },
+  {
+    tagPt: 'Urgente · Execução', tagEn: 'Urgent · Execution', tagCls: 'rec-urgent',
+    titlePt: 'Treinamento intensivo em SPIN-I: Aprofundamento de Consequências',
+    titleEn: 'Intensive SPIN-I training: Implication deepening',
+    bodyPt: 'Evidência: Consequências = 6,74 — menor nota sistêmica do time. Nenhum closer chegou a 8,0. Sem implicação emocional gerada, qualquer objeção de preço é racional e vence. Ação: roleplay focado em perguntas de implicação ("o que acontece se você não migrar de carreira nos próximos 12 meses?"). Meta: elevar média para ≥7,5 até fim de outubro.',
+    bodyEn: 'Evidence: Implication = 6.74 — lowest systemic score on the team. No closer reached 8.0. Without emotional implication built, any price objection wins rationally. Action: roleplay focused on implication questions ("What happens if you don\'t change careers in the next 12 months? How much income are you leaving on the table per month?"). Target: raise team average to ≥7.5 by end of October.',
+  },
+  {
+    tagPt: 'Curto Prazo · Execução', tagEn: 'Short Term · Execution', tagCls: 'rec-mid',
+    titlePt: 'Fortalecer geração de urgência e técnicas de fechamento',
+    titleEn: 'Strengthen urgency creation and closing techniques',
+    bodyPt: 'Evidência: Urgência = 6,94 e Fechamento = 7,19. Time fecha sem urgência criada. Implementar protocolo de urgência legítima (próximas turmas, custo de oportunidade calculado ao vivo). Introduzir técnicas de fechamento por alternativas ao final de toda reunião.',
+    bodyEn: 'Evidence: Urgency = 6.94 and Closing = 7.19. The team is attempting to close without urgency built. Implement a legitimate urgency protocol (next cohort dates, live opportunity-cost calculation). Introduce alternative-choice closing at the end of every meeting.',
+  },
+  {
+    tagPt: 'Curto Prazo · Execução', tagEn: 'Short Term · Execution', tagCls: 'rec-mid',
+    titlePt: 'Ativar dados do SDR sistematicamente em toda reunião',
+    titleEn: 'Systematically activate SDR data before every meeting',
+    bodyPt: 'Evidência: Uso SDR = 7,30 com underperformance em Gabriel Morial (6,88), Erick Paiva (6,84) e Raphael Soares Luna (6,28). SDR coleta contexto que o closer deve usar para personalizar a implicação. Tornar uso do briefing SDR obrigatório e checável no início de toda reunião.',
+    bodyEn: 'Evidence: SDR use = 7.30 with underperformance in Gabriel Morial (6.88), Erick Paiva (6.84), and Raphael Soares Luna (6.28). The SDR collects context the closer must use to personalize implication. Make SDR briefing use mandatory and auditable at the start of every meeting.',
+  },
+  {
+    tagPt: 'Médio Prazo · Produto', tagEn: 'Medium Term · Product', tagCls: 'rec-mid',
+    titlePt: 'Criar opções de entrada que reduzam a barreira financeira inicial',
+    titleEn: 'Create entry options that lower the initial financial barrier',
+    bodyPt: 'Evidência: 6,2% de perdas por barreira financeira em contexto de Selic a 14%. Ticket de R$15–22k é objetivamente alto para parte do público. Avaliar parcelamento em mais vezes (24–36x), parceria com fintechs para crédito educacional, ou módulo de entrada a preço reduzido com conversão para o programa completo.',
+    bodyEn: 'Evidence: 6.2% of losses from financial barriers with Selic at 14%. A R$15–22k ticket is objectively high for part of the target audience. Evaluate longer installment plans (24–36x), fintech partnerships for educational credit, or a reduced-price entry module that converts to the full program.',
+  },
+  {
+    tagPt: 'Médio Prazo · Marketing', tagEn: 'Medium Term · Marketing', tagCls: 'rec-mid',
+    titlePt: 'Construir prova social local: cases de alunos brasileiros empregados',
+    titleEn: 'Build local social proof: Brazilian employed alumni cases',
+    bodyPt: 'Evidência: mercado 2026 exige resultado tangível comprovado. Brand awareness local menor vs. Trybe/Le Wagon. Estruturar programa de coleta de cases (vídeos curtos, dados de empregabilidade regionalizados). Closers devem ter 3–5 cases de alunos com perfil semelhante ao lead disponíveis em reunião.',
+    bodyEn: 'Evidence: 2026 market demands proven tangible outcomes. Local brand awareness lower than Trybe/Le Wagon. Build a structured alumni case program (short videos, regionalized employment data). Closers should have 3–5 similar-profile alumni cases available during every meeting.',
+  },
+  {
+    tagPt: 'Contínuo · Dados', tagEn: 'Ongoing · Data', tagCls: 'rec-ongoing',
+    titlePt: 'Cruzar HubSpot deal-owner com scorecard Elephan por closer',
+    titleEn: 'Cross-reference HubSpot deal owner with Elephan scorecard per closer',
+    bodyPt: 'Não foi possível correlacionar taxa de fechamento por closer com desempenho no scorecard nesta análise. Mapear hubspot_owner_id → Elephan userId e calcular taxa de conversão por closer. Correlacionar com scorecard para identificar se closers com scores baixos têm piores taxas de fechamento.',
+    bodyEn: 'It was not possible to correlate close rate per closer with scorecard performance in this analysis. Map hubspot_owner_id → Elephan userId and calculate conversion rate per closer. Correlate with scorecard to confirm whether low-score closers also have lower close rates.',
+  },
+  {
+    tagPt: 'Contínuo · Dados', tagEn: 'Ongoing · Data', tagCls: 'rec-ongoing',
+    titlePt: 'Reautenticar Elephan e executar análise de transcrições',
+    titleEn: 'Re-authenticate Elephan and run transcript analysis',
+    bodyPt: 'Endpoints de transcrição e insights do Elephan retornaram erro de sessão. As transcrições são a fonte mais precisa para classificar os 894 "parou de responder" e identificar padrões de objeção. Reautenticar conector Elephan e reexecutar análise de insights (objection, potential_loss) para o período.',
+    bodyEn: 'Elephan transcription and insights endpoints returned session errors. Transcripts are the most precise source for classifying 894 "stopped answering" cases and identifying recurring objection patterns. Re-authenticate the Elephan connector and re-run insights analysis (objection, potential_loss) for the period.',
+  },
+];
+
+function renderRecs() {
+  const lang = document.documentElement.getAttribute('data-lang') || 'pt';
+  document.getElementById('rec-list').innerHTML = recs.map((r, i) => `
+    <div class="rec-item">
+      <div class="rec-num">${String(i+1).padStart(2,'0')}</div>
+      <div>
+        <div class="rec-tag ${r.tagCls}">${r['tag'+lang[0].toUpperCase()+lang.slice(1)] || (lang==='pt'?r.tagPt:r.tagEn)}</div>
+        <div class="rec-title">${lang==='pt'?r.titlePt:r.titleEn}</div>
+        <div class="rec-body">${lang==='pt'?r.bodyPt:r.bodyEn}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ===================== RENDER ON LOAD =====================
+function renderAll() {
+  renderReasons();
+  renderComps();
+  renderRecs();
+}
+renderAll();
+
+// Re-render language-dependent content when language changes
+const origSetLang = setLang;
+window.setLang = function(lang) {
+  origSetLang(lang);
+  renderAll();
+};
+</script>
+</body>
+</html>
